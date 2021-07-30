@@ -176,14 +176,15 @@ class FunctionBase:
 
         """
         # TODO: Implement for Task 1.3.
-        derivs = cls.backward(ctx, d_output)
-        return [
-            VariableWithDeriv(val, deriv)
-            for val, deriv in zip(inputs, wrap_tuple(derivs))
+    
+        der = cls.backward(ctx, d_output)
+        l = [
+            VariableWithDeriv(val, der)
+            for val, der in zip(inputs, wrap_tuple(der))
             if not is_constant(val)
         ]
-
-
+        return l
+     
 def is_leaf(val):
     return isinstance(val, Variable) and val.history.is_leaf()
 
@@ -204,26 +205,12 @@ def backpropagate(final_variable_with_deriv):
            and its derivative that we want to propagate backward to the leaves.
     """
     # TODO: Implement for Task 1.4.
-    queue = [[final_variable_with_deriv.variable, final_variable_with_deriv.deriv]]
-
-    def get_queue_index(name):
-        for i, pair in enumerate(queue):
-            var = pair[0]
-            if var.name == name:
-                return i
-        return None
-
-    while queue:
-        pair = queue.pop(0)
-        var, deriv = pair[0], pair[1]
+    
+    col = [final_variable_with_deriv]
+    while col:
+        var_der = col.pop(0)
+        d_output,var = var_der.deriv,var_der.variable 
         if is_leaf(var):
-            var._add_deriv(deriv)
+            var._add_deriv(d_output)
         else:
-            vars_with_derivs = var.history.backprop_step(deriv)
-            for chain_var in vars_with_derivs:
-                new_var, new_deriv = chain_var.variable, chain_var.deriv
-                idx = get_queue_index(new_var.name)
-                if idx is not None:
-                    queue[idx][1] += new_deriv
-                else:
-                    queue.append([new_var, new_deriv])
+            col.extend(var.history.backprop_step(d_output))
